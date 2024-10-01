@@ -1,0 +1,7 @@
+Copyrights (2023) University of Warsaw
+
+If you used MATTS2021 data bank in your work please cite:
+
+Chodkiewicz et. al., J. Appl. Cryst., 2018, 51, 193-199
+Hansen & Coppens, Acta Cryst. A, 1978, 34, 909-921
+Jha, et al., J. Chem. Inf. Model., 2022, 62, 3752-3765
