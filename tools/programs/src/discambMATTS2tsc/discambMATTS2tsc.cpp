@@ -10,7 +10,8 @@
 #include "discamb/IO/shelx_io.h"
 #include "discamb/IO/tsc_io.h"
 #include "discamb/IO/structure_io.h"
-#include "discamb/Scattering/SfCalculator.h"
+//#include "discamb/Scattering/SfCalculator.h"
+#include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
 #include "MATTS_Default.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/parse_cmd.h"
@@ -95,14 +96,8 @@ void defaultInput(
     stringstream ss;
     ss <<
         "{\n"
-        "    \"use discamb\": \"yes\",\n"
-        "        \"form factor engine\" :\n"
-        "    {\n"
-        "        \"type\": \"ubdb\",\n"
-        "            \"data\" :\n"
-        "        {\n"
-        "            \"assignment info\" : \"print_to_discamb2tsc_log_file\"\n,"
-        "            \"multipole cif\" : \"" + jobName + ".cif_rho\"";
+        "    \"assignment info\" : \"print_to_discamb2tsc_log_file\"\n,"
+        "    \"multipole cif\" : \"" + jobName + ".cif_rho\"";
     if (electronScatteringIfNoAspherJsonFile)
         ss << ",\n   \"electron_scattering\": true";
 
@@ -110,9 +105,7 @@ void defaultInput(
         ss << ",\n   \"unit cell charge\": " << unitCellCharge;
 
     ss << "\n"
-        "        }\n"
-        "    }\n"
-        "}\n";
+          "}\n";
 
     ss >> data;
 
@@ -120,7 +113,7 @@ void defaultInput(
 }
 
 
-std::unique_ptr<SfCalculator> sfCalculatorFromJsonFile(
+std::shared_ptr<HcAtomBankStructureFactorCalculator> sfCalculatorFromJsonFile(
     const Crystal &crystal,
     bool &aspherJsonPresent,
     bool electronScatteringIfNoAspherJsonFile,
@@ -138,30 +131,44 @@ std::unique_ptr<SfCalculator> sfCalculatorFromJsonFile(
         ifstream jsonFileStream("aspher.json");
         
         if (jsonFileStream.good())
-            jsonFileStream >> jsonData;
+        {
+            nlohmann::json jsonDataFromFile;
+            jsonFileStream >> jsonDataFromFile;
+            auto data = jsonDataFromFile.find("form factor engine");
+            if (data != jsonDataFromFile.end())
+                jsonData = jsonDataFromFile["form factor engine"]["data"];
+            else
+                jsonData = jsonDataFromFile;
+        }
         else
         {
             on_error::throwException("can not read aspher.json file, expected to be present in the current directory", __FILE__, __LINE__);
-            return std::unique_ptr<SfCalculator>(nullptr);
+            return std::shared_ptr<HcAtomBankStructureFactorCalculator>(nullptr);
         }
     }
     else
         defaultInput(electronScatteringIfNoAspherJsonFile, unitCellChargeIfNoAspherJsonFile, unitCellCharge, jsonData, jobName);
 
     
-    // electrons?
+    // electrons? bank path give?
     electronScattering = false;
-    auto data = jsonData.find("form factor engine");
-    if (data != jsonData.end())
-    {
-        if (data->find("electron_scattering") != data->end() || data->find("electron scattering") != data->end())
-            electronScattering = true;
-    }
-    else
-        if (jsonData.find("electron_scattering") != jsonData.end() || jsonData.find("electron scattering") != jsonData.end())
-            electronScattering = true;
+    bool hasBankPath = false;
 
-    return std::unique_ptr<SfCalculator>(SfCalculator::create(crystal, jsonData));
+    electronScattering = jsonData.value("electron_scattering", electronScattering);
+    electronScattering = jsonData.value("electron scattering", electronScattering);
+    
+    string radiation = electronScattering ? "electron" : "X-ray";
+    clog << "Atomic form factor for " << radiation << " scattering calculated with\nHansen - Coppens model parameterized with MATTS databank.\n\n";
+
+    if (jsonData.find("bank path") != jsonData.end())
+        hasBankPath = true;
+
+    if(hasBankPath)
+        return make_shared<HcAtomBankStructureFactorCalculator>(crystal, jsonData);
+
+    string bankString;
+    default_ubdb_bank_string(bankString);
+    return make_shared<HcAtomBankStructureFactorCalculator>(crystal, jsonData, bankString);
 }
 
     bool hklShouldBeTakenFromTsc(
@@ -238,27 +245,6 @@ void getStructureAndHklFile(
 
 void addMattsCitation(string mattsVersion)
 {
-    /*clog << "Citation\n"
-        << "If you used discamb2tsc in your work please add the following text to resulting.cif file :\n"
-        << " _refine_special_details\n"
-        << " ;\n"
-        << " TAAM / MATTS refinement.\n"
-        << " (Jha et., al., Acta Cryst.B, 2020, 76, 296 - 306)\n"
-        << " Uses aspherical atomic scattering factors computed by DiSCaMB library\n"
-        << " (Chodkiewicz et.al., J.Appl.Cryst., 2018, 51, 193 - 199)\n"
-        << " from multipolar model\n"
-        << " (Hansen & Coppens, Acta Cryst.A, 1978, 34, 909 - 921)\n"
-        << " parametrized using the MATTS databank(successor of UBDB2018).\n"
-        << " (Kumar et al., Acta Cryst.A, 2019, 75, 398 - 408)\n"
-        << " Refinement performed with olex2.refine\n"
-        << " with the external atomic form factors stored in.tsc\n"
-        << " (Kleemiss et al., Chem.Sci., 2021, 12, 1675 - 1692)\n"
-        << " ;\n"
-        << "and in your publication, please, cite:\n"
-        << "P.Kumar, B.Gruza, S.A.Bojarowski, P.M.Dominiak : Extension of the transferable aspherical pseudoatom data bank for the comparison of molecular electrostatic potentials in structure–activity studies.Acta Cryst.A(2019) 75, 398 - 408.\n"
-        << "M.L.Chodkiewicz, S.Migacz, W.Rudnicki, A.Makal, J.A.Kalinowski, N.W.Moriarty, R.W.Grosse - Kunstleve, P.V.Afonine, P.D.Adams, P.M.Dominiak : DiSCaMB : a software library for aspherical atom model X - ray scattering factor calculations with CPUs and GPUs.J.Appl.Cryst. (2018). 51, 193 - 199.\n"
-        << "R.J.Gildea, L.J.Bourhis, O.V.Dolomanov, R.W.Grosse - Kunstleve, H.Puschmann, P.D.Adamsand J.A.K.Howard : iotbx.cif : a comprehensive CIF toolbox.J.Appl.Cryst. (2011). 44, 1259 - 1263.\n";*/
-
 
     clog<< "Citation\n"
         << "If you used discambMATTS2tsc in your work please add the following text\n"
@@ -462,10 +448,11 @@ int main(int argc, char *argv[])
             clog << header
                 << "\n" << "file created at " << ctime(&time_now) << "\n";
 
+            
 
             
             bool aspherJsonPresent;
-            std::unique_ptr<SfCalculator> calculator = 
+            auto calculator = 
                 sfCalculatorFromJsonFile(crystal, aspherJsonPresent, electronScatteringIfNoAspherJsonFile, 
                                          unitCellChargeIfNoAspherJsonFile, unitCellCharge, electronScattering, jobName);
             

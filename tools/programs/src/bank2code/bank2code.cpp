@@ -41,6 +41,7 @@ void packType(
     const vector<string> &typeLines,
     vector<string> &packed)
 {
+    /*
     vector<string> words;
     packed.clear();
     string line = typeLines[2];
@@ -90,6 +91,7 @@ void packType(
             line += words[4 * i + 1] + " " + words[4 * i + 2] + " " + words[4 * i + 3] + " ";
     }
     packed.push_back(line);
+    */
 }
 
 void unpackType(const string &line1, const string& line2, vector<string> &unpacked)
@@ -414,6 +416,7 @@ int main(int argc, char *argv[])
 
     try 
     {
+        /*
         if (argc != 2)
             cout<< "ERROR: expected bank file name as an argument, output will be placed in file 'output'\n";
         vector<string> packed, packedFromFile, unpacked;
@@ -438,7 +441,7 @@ int main(int argc, char *argv[])
         else
             cout << "packed and unpacked bank differ from the original\n";
         return 0;
-
+        */
 		ofstream out("out");
 		ifstream in(argv[1]);
 		string line;
