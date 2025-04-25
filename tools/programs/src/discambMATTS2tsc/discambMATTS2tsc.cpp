@@ -149,6 +149,7 @@ std::shared_ptr<HcAtomBankStructureFactorCalculator> sfCalculatorFromJsonFile(
     else
         defaultInput(electronScatteringIfNoAspherJsonFile, unitCellChargeIfNoAspherJsonFile, unitCellCharge, jsonData, jobName);
 
+
     
     // electrons? bank path give?
     electronScattering = false;
