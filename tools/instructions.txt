@@ -1,5 +1,8 @@
 Building discambMATTS2tsc with new version of data bank compiled in
 
+(known problems: there can be a problem with compilation of release version 
+ with gcc due to size of input file containng the bank)
+
 1. build /tools (in principle only bank2code)
    this step requires discamb to be build and installed 
    (see also http://discamb.org/compilation.html)
