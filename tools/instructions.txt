@@ -1,0 +1,24 @@
+Building discambMATTS2tsc with new version of data bank compiled in
+
+1. build /tools (in principle only bank2code)
+   this step requires discamb to be build and installed 
+   (see also http://discamb.org/compilation.html)
+   in case of compilation on Windows with Visual Studio it could be something like:
+   cmake path_to_tools -G "Visual Studio 17 2022" -A x64^
+    -DDISCAMB_LIB_PATH="c:/path/to/discamb/lib"^
+    -DDISCAMB_INCLUDE_PATH="c:/path/to/discamb/include"^
+    -DNLOHMANN_JSON_PATH="c:/path/to/nlohmann/json"
+
+2. use bank2code to generate piece of code containing the databank
+   usage: bank2code data_bak_file
+   a text file "out" is generated  
+3. remove last comma in the output file (in the last line)   
+4. the outputfile file contains list of strings
+   which should be put into /programs/src/discambMATTS2tsc/MATTS_Default.cpp 
+   as a content of vector defined at line 12
+   vector<string> v = { 
+   remove any preexisting content of the vector
+5. build tools again (only discambMATTS2tsc is needed this time)
+   
+   
+   
