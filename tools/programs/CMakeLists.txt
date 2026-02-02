@@ -6,7 +6,12 @@ cmake_minimum_required(VERSION 3.15)
 PROJECT(MATTS_programs)
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON) 
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+option(DISCAMB_MSVC_MT "(advanced) An option for MSVC to build multi-threaded statically-linked version" OFF) 
+
+if(DISCAMB_MSVC_MT)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
